@@ -1,0 +1,39 @@
+#!/bin/sh
+cd "${0%/*}" || exit                                # Run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
+
+# copy model surface from your data
+mkdir -p constant/triSurface
+
+# move model to constant/triSurface/
+mv car.stl constant/triSurface/
+
+# Using distributedTriSurfaceMesh? or create the background mesh to generate the object.
+runApplication blockMesh
+
+# 0
+cp -r 0.orig 0
+
+# extract the basic features of the surface
+runApplication surfaceFeatureExtract
+
+# generate the fit-body girds to mesh the features of the surface
+snappyHexMesh -overwrite
+
+# topo transfer to distinguish the fit-body and teh background mesh.
+runApplication topoSet
+
+touch a.foam
+
+#paraview a.foam
+# decomposer to calculate
+runApplication decomposePar
+
+# Calculating and visualing
+mpirun -np 4 simpleFoam -parallel > log.simpleFoam
+#simpleFoam
+# reconstruct the flow fields
+#reconstructParMesh -constant
+reconstructPar -latestTime
+#------------------------------------------------------------------------------
